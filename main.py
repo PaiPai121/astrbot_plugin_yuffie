@@ -6,6 +6,7 @@ AstrBot v4 标准插件结构
 
 import os
 import sys
+import asyncio
 
 # 确保插件内部模块可以被正常导入
 sys.path.append(os.path.dirname(__file__))
