@@ -29,10 +29,10 @@ class YuffiePlugin(Star):
     """
     Yuffie 贵金属监控插件主类
     """
-    
-    def __init__(self, context: Context, config: dict):
+
+    def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
-        self.config = config
+        self.config = config or {}
 
     # 插件启用时的生命周期钩子
     async def on_enable(self, context: Context):
