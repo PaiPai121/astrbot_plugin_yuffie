@@ -1,7 +1,5 @@
 """
 main.py - Yuffie 贵金属监控系统 AstrBot 插件入口
-
-AstrBot v4 插件标准结构
 """
 
 import os
@@ -15,62 +13,29 @@ if plugin_dir not in sys.path:
     sys.path.insert(0, os.path.join(plugin_dir, 'core'))
 
 # AstrBot API
-try:
-    from astrbot.api import logger
-    from astrbot.api.event import AstrMessageEvent
-    from astrbot.api.message_components import Plain
-    from astrbot.api.register import register
-    from astrbot.api.star import Context, Star
-    ASTRBOT_AVAILABLE = True
-except ImportError:
-    import logging
-    logger = logging.getLogger("Yuffie")
-    ASTRBOT_AVAILABLE = False
-    
-    class register:
-        @staticmethod
-        def plugin(name, desc, version):
-            def decorator(cls):
-                return cls
-            return decorator
-        
-        @staticmethod
-        def command(name):
-            def decorator(func):
-                return func
-            return decorator
-    
-    class AstrMessageEvent:
-        pass
-    
-    class Context:
-        pass
-    
-    class Star:
-        def __init__(self, context, config):
-            pass
+from astrbot.api import logger
+from astrbot.api.event import AstrMessageEvent
+from astrbot.api.message_components import Plain
+from astrbot.api.register import register
+from astrbot.api.star import Context, Star, Register
 
 # 核心组件
-try:
-    from plugins.alert_monitor import (
-        init_monitor,
-        start_monitor,
-        stop_monitor,
-        get_monitor
-    )
-    from plugins.analysis_report import handle_gold_analysis
-    from plugins.subscription_commands import (
-        subscribe_command,
-        unsubscribe_command,
-        subscription_status_command,
-        subscription_stats_command
-    )
-except ImportError as e:
-    logger.error(f"[Yuffie] 导入核心组件失败：{e}")
+from plugins.alert_monitor import (
+    init_monitor,
+    start_monitor,
+    stop_monitor,
+    get_monitor
+)
+from plugins.analysis_report import handle_gold_analysis
+from plugins.subscription_commands import (
+    subscribe_command,
+    unsubscribe_command,
+    subscription_status_command,
+    subscription_stats_command
+)
 
 
-# 插件主类 - AstrBot v4 标准格式
-@register.plugin("astrbot_plugin_yuffie", "Yuffie 贵金属监控", "1.0.0")
+# 插件主类
 class YuffiePlugin(Star):
     """
     Yuffie 贵金属监控插件主类
@@ -185,3 +150,7 @@ class YuffiePlugin(Star):
             
         except Exception as e:
             await event.send(Plain(f"⚠️ 查询失败：{e}"))
+
+
+# 注册插件 - 这是关键！
+Register.register_star(YuffiePlugin)
