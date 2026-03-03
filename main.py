@@ -19,13 +19,6 @@ import sys
 import shlex
 from typing import Optional
 
-# 添加插件目录到 Python 路径
-plugin_dir = os.path.dirname(os.path.abspath(__file__))
-if plugin_dir not in sys.path:
-    sys.path.insert(0, plugin_dir)
-    sys.path.insert(0, os.path.join(plugin_dir, 'plugins'))
-    sys.path.insert(0, os.path.join(plugin_dir, 'core'))
-
 # AstrBot API
 try:
     from astrbot.api import logger, AstrBotConfig
@@ -60,20 +53,37 @@ except ImportError:
     class AstrMessageEvent:
         pass
 
-# 核心组件 - 使用相对导入
-from plugins.alert_monitor import (
-    init_monitor,
-    start_monitor,
-    stop_monitor,
-    get_monitor
-)
-from plugins.analysis_report import handle_gold_analysis
-from plugins.subscription_commands import (
-    subscribe_command,
-    unsubscribe_command,
-    subscription_status_command,
-    subscription_stats_command
-)
+# 核心组件 - 使用绝对导入
+try:
+    from plugins.alert_monitor import (
+        init_monitor,
+        start_monitor,
+        stop_monitor,
+        get_monitor
+    )
+    from plugins.analysis_report import handle_gold_analysis
+    from plugins.subscription_commands import (
+        subscribe_command,
+        unsubscribe_command,
+        subscription_status_command,
+        subscription_stats_command
+    )
+except ImportError:
+    # 如果导入失败，尝试从当前目录导入
+    import plugins
+    from plugins.alert_monitor import (
+        init_monitor,
+        start_monitor,
+        stop_monitor,
+        get_monitor
+    )
+    from plugins.analysis_report import handle_gold_analysis
+    from plugins.subscription_commands import (
+        subscribe_command,
+        unsubscribe_command,
+        subscription_status_command,
+        subscription_stats_command
+    )
 
 # 全局变量
 _streamlit_process = None
