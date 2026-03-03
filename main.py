@@ -19,6 +19,11 @@ import sys
 import shlex
 from typing import Optional
 
+# 添加插件目录到 Python 路径
+plugin_dir = os.path.dirname(os.path.abspath(__file__))
+if plugin_dir not in sys.path:
+    sys.path.insert(0, plugin_dir)
+
 # AstrBot API
 try:
     from astrbot.api import logger, AstrBotConfig
@@ -39,13 +44,13 @@ except ImportError:
             def decorator(func):
                 return func
             return decorator
-        
+
         @staticmethod
         def event_handler(*args, **kwargs):
             def decorator(func):
                 return func
             return decorator
-    
+
     class EventType:
         GroupMessage = 1
         FriendMessage = 2
@@ -53,7 +58,7 @@ except ImportError:
     class AstrMessageEvent:
         pass
 
-# 核心组件
+# 核心组件 - 使用相对导入
 from plugins.alert_monitor import (
     init_monitor,
     start_monitor,
