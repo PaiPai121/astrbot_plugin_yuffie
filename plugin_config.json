@@ -4,7 +4,6 @@
     "version": "1.0.0",
     "author": "Yuffie Team",
     "repo": "https://github.com/PaiPai121/astrbot_plugin_yuffie",
-    "main": "main",
     "description": "高可用贵金属高频监控与多因子分析系统，支持实时金价监控、自动报警、K 线图可视化等功能",
     "tags": ["金融", "监控", "预警", "可视化"],
     "requirements": [
