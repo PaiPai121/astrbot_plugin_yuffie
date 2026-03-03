@@ -33,28 +33,36 @@ class YuffiePlugin(Star):
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
         self.config = config or {}
+        self.monitor_started = False
 
-    # 插件启用时的生命周期钩子
-    async def on_enable(self, context: Context):
+        # 在__init__中直接初始化，而不是使用 on_enable
+        self._init_monitor()
+
+    def _init_monitor(self):
+        """初始化监控器"""
+        logger.info("[Yuffie] 插件正在初始化...")
+
         # 从配置中读取参数
         use_mock = self.config.get("use_mock", False)
         cooldown = self.config.get("cooldown_minutes", 30)
-        
-        # 初始化监控器
-        init_monitor(use_mock=use_mock, cooldown_minutes=cooldown)
-        
-        # 定义警报发送回调
-        async def send_alert(message: str, level: str):
-            logger.info(f"[Yuffie Alert] {level}: {message}")
 
-        # 启动后台异步监控任务
-        await start_monitor(send_alert)
-        logger.info("[Yuffie] 插件服务已启动，Web 面板地址：http://localhost:8501")
+        try:
+            # 初始化监控器
+            init_monitor(use_mock=use_mock, cooldown_minutes=cooldown)
 
-    # 插件禁用时的生命周期钩子
-    async def on_disable(self, context: Context):
-        await stop_monitor()
-        logger.info("[Yuffie] 插件服务已停止")
+            # 定义警报发送回调
+            async def send_alert(message: str, level: str):
+                logger.info(f"[Yuffie Alert] {level}: {message}")
+
+            # 启动后台异步监控任务
+            asyncio.create_task(start_monitor(send_alert))
+            self.monitor_started = True
+
+            logger.info("[Yuffie] ✅ 后台监控已启动")
+            logger.info("[Yuffie] 💬 可用指令：/黄金分析、/订阅、/取消订阅、/订阅状态、/订阅统计、/监控状态")
+
+        except Exception as e:
+            logger.error(f"[Yuffie] 启动监控器失败：{e}")
 
     # 注册指令：使用 @filter.command 装饰类方法
     @filter.command("黄金分析")
