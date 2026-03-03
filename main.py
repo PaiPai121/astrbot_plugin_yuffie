@@ -6,10 +6,14 @@ AstrBot v4 标准插件结构
 
 import os
 import sys
-from astrbot.api.all import *
 
 # 确保插件内部模块可以被正常导入
 sys.path.append(os.path.dirname(__file__))
+
+# AstrBot API - 按照 BiliVideo 插件的正确导入方式
+from astrbot.api.event import filter, AstrMessageEvent
+from astrbot.api.star import Context, Star
+from astrbot.api import logger
 
 from plugins.alert_monitor import init_monitor, start_monitor, stop_monitor, get_monitor
 from plugins.analysis_report import handle_gold_analysis
