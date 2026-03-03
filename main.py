@@ -1,7 +1,5 @@
 """
 main.py - Yuffie 贵金属监控系统 AstrBot 插件入口
-
-参考 BiliVideo 插件结构
 """
 
 import os
@@ -15,7 +13,7 @@ if plugin_dir not in sys.path:
     sys.path.insert(0, os.path.join(plugin_dir, 'core'))
 
 # AstrBot API
-from astrbot.api import logger, filter
+from astrbot.api import logger, filter, register
 from astrbot.api.event import AstrMessageEvent
 from astrbot.api.message_components import Plain
 from astrbot.api.star import Context, Star
@@ -40,6 +38,7 @@ except ImportError as e:
     logger.error(f"[Yuffie] 导入核心组件失败：{e}")
 
 
+@register.plugin("astrbot_plugin_yuffie", "Yuffie 贵金属监控", "1.0.0")
 class YuffiePlugin(Star):
     """
     Yuffie 贵金属监控插件主类
