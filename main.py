@@ -21,8 +21,11 @@ from plugins.subscription_commands import (
 )
 
 
-@register.plugin("astrbot_plugin_yuffie", "Yuffie 贵金属监控", "高可用贵金属高频监控与多因子分析系统", "1.1.0")
 class YuffiePlugin(Star):
+    """
+    Yuffie 贵金属监控插件主类
+    """
+    
     def __init__(self, context: Context, config: dict):
         super().__init__(context)
         self.config = config
