@@ -308,6 +308,38 @@ if ASTRBOT_AVAILABLE:
             await event.send(Plain(f"⚠️ 查询失败：{e}"))
 
 
+# ==================== 插件主类 ====================
+
+class YuffiePlugin:
+    """
+    Yuffie 贵金属监控插件主类
+
+    AstrBot 会自动加载这个类并调用其方法
+    """
+
+    def __init__(self, context: dict, config: dict):
+        """
+        插件初始化
+
+        Args:
+            context: AstrBot 上下文
+            config: 插件配置
+        """
+        self.context = context
+        self.config = config
+        logger.info(f"[Yuffie] 插件初始化完成")
+
+    async def initialize(self):
+        """插件初始化时调用（异步）"""
+        logger.info(f"[Yuffie] 插件正在初始化...")
+        await start_plugin()
+
+    async def destroy(self):
+        """插件销毁时调用（异步）"""
+        logger.info(f"[Yuffie] 插件正在销毁...")
+        await stop_plugin()
+
+
 # ==================== 主程序入口 ====================
 
 if __name__ == "__main__":
