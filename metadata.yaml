@@ -5,4 +5,4 @@ version: v1.1.0
 author: Yuffie Team
 repo: https://github.com/PaiPai121/astrbot_plugin_yuffie
 main: main
-class: YuffiePlugin
+plugin_name: YuffiePlugin
