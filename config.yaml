@@ -1,0 +1,38 @@
+# ==========================================
+# Yuffie (尤菲) - 贵金属高频监控与分析系统配置
+# ==========================================
+
+# 1. 核心监控参数 (Core Monitor Settings)
+monitor:
+  symbol: "GC=F"                  # 监控标的（默认纽约期金）
+  domestic_symbol: "Au9999"       # 国内监控标的（上海黄金交易所 Au99.99）
+  poll_interval: 60               # 兜底轮询间隔（秒）- 用于 HTTP 降级模式
+  cooldown_minutes: 30            # 预警触发后的冷却时间（分钟），防止连环轰炸
+
+# 2. 量化预警阈值 (Quantitative Thresholds)
+atr_strategy:
+  enabled: true                   # 是否启用动态 ATR 阈值
+  period: 14                      # ATR 计算周期（比如过去 14 根 K 线）
+  k_multiplier: 2.5               # 触发乘数：|波动| > 2.5 * ATR 时报警
+  fallback_threshold: 10.0        # 降级绝对阈值：如果 ATR 失效，单边波动超过 10 美元报警
+  volume_surge_ratio: 1.5         # 放量确认倍数：成交量必须大于平均值的 1.5 倍
+
+# 3. 数据源端点 (Data Sources)
+data_sources:
+  # 国际金价数据源
+  primary_ws: "wss://stream.binance.com:9443/ws/paxgusdt@trade"  # Binance PAXG/USDT
+  fallback_api: "yfinance"                  # 备源：Yahoo Finance
+  
+  # 国内金价数据源（新浪财经/腾讯财经免费 API）
+  domestic_gold_api: "http://hq.sinajs.cn/list=s_rtAu9999"  # 新浪财经 Au99.99
+  domestic_gold_api_alt: "http://webqt.gtimg.cn/hk/quotes/data.php?code=RT_AU9999"  # 腾讯财经备选
+  
+  # 汇率数据源（USD/CNY）
+  exchange_rate_api: "http://hq.sinajs.cn/list=usdcny"  # 美元兑人民币离岸汇率
+  
+  fred_api_key: "YOUR_FRED_API_KEY_HERE"    # FRED 宏观数据 API Key (日后分析插件用)
+
+# 4. 交易日历与时区 (Market Calendar)
+calendar:
+  exchange: "CME"                 # 芝加哥商品交易所日历
+  open_mute_minutes: 30           # 周一开盘前 30 分钟静默，过滤跳空高开/低开的假信号
