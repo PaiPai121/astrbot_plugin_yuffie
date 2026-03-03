@@ -7,18 +7,25 @@ AstrBot v4 标准插件结构
 import os
 import sys
 import asyncio
+import subprocess
 
 # 确保插件内部模块可以被正常导入
-sys.path.append(os.path.dirname(__file__))
+plugin_dir = os.path.dirname(os.path.abspath(__file__))
+if plugin_dir not in sys.path:
+    sys.path.insert(0, plugin_dir)
 
-# AstrBot API - 按照 BiliVideo 插件的正确导入方式
+# AstrBot API
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star
 from astrbot.api import logger
 
-from plugins.alert_monitor import init_monitor, start_monitor, stop_monitor, get_monitor
-from plugins.analysis_report import handle_gold_analysis
-from plugins.subscription_commands import (
+# 导入插件组件
+from plugins import (
+    init_monitor,
+    start_monitor,
+    stop_monitor,
+    get_monitor,
+    handle_gold_analysis,
     subscribe_command,
     unsubscribe_command,
     subscription_status_command,
@@ -30,41 +37,77 @@ class YuffiePlugin(Star):
     """
     Yuffie 贵金属监控插件主类
     """
-
+    
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
+        self.context = context
         self.config = config or {}
         self.monitor_started = False
-
-        # 在__init__中直接初始化，而不是使用 on_enable
+        self.streamlit_process = None
+        
+        # 在__init__中直接初始化
         self._init_monitor()
-
+        self._start_streamlit()
+    
     def _init_monitor(self):
         """初始化监控器"""
         logger.info("[Yuffie] 插件正在初始化...")
-
+        
         # 从配置中读取参数
         use_mock = self.config.get("use_mock", False)
         cooldown = self.config.get("cooldown_minutes", 30)
-
+        
         try:
             # 初始化监控器
             init_monitor(use_mock=use_mock, cooldown_minutes=cooldown)
-
+            
             # 定义警报发送回调
             async def send_alert(message: str, level: str):
                 logger.info(f"[Yuffie Alert] {level}: {message}")
-
+            
             # 启动后台异步监控任务
             asyncio.create_task(start_monitor(send_alert))
             self.monitor_started = True
-
+            
             logger.info("[Yuffie] ✅ 后台监控已启动")
             logger.info("[Yuffie] 💬 可用指令：/黄金分析、/订阅、/取消订阅、/订阅状态、/订阅统计、/监控状态")
-
+            
         except Exception as e:
             logger.error(f"[Yuffie] 启动监控器失败：{e}")
-
+    
+    def _start_streamlit(self):
+        """启动 Streamlit Web 面板"""
+        try:
+            web_app_path = os.path.join(plugin_dir, "web_app.py")
+            
+            logger.info("[Yuffie] 正在启动 Streamlit Web 监控面板...")
+            
+            # 启动 Streamlit 进程（后台运行）
+            self.streamlit_process = subprocess.Popen(
+                [sys.executable, "-m", "streamlit", "run", web_app_path,
+                 "--server.port", "8501",
+                 "--server.headless", "true",
+                 "--server.address", "0.0.0.0"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
+                start_new_session=True
+            )
+            
+            logger.info("[Yuffie] ✅ Streamlit Web 监控面板已启动")
+            logger.info("[Yuffie] 🌐 访问地址：http://localhost:8501")
+            
+        except Exception as e:
+            logger.error(f"[Yuffie] ❌ Streamlit 启动失败：{e}")
+    
+    def __del__(self):
+        """插件销毁时清理资源"""
+        if self.streamlit_process:
+            try:
+                self.streamlit_process.terminate()
+                logger.info("[Yuffie] Streamlit 已停止")
+            except Exception:
+                pass
+    
     # 注册指令：使用 @filter.command 装饰类方法
     @filter.command("黄金分析")
     async def gold_analysis(self, event: AstrMessageEvent):
@@ -73,6 +116,7 @@ class YuffiePlugin(Star):
             report = await handle_gold_analysis(event)
             yield event.plain_result(report)
         except Exception as e:
+            logger.error(f"[Yuffie] 黄金分析失败：{e}")
             yield event.plain_result(f"⚠️ 分析失败：{e}")
 
     @filter.command("订阅")
