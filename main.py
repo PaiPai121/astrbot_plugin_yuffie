@@ -43,12 +43,10 @@ class YuffiePlugin(Star):
         self.context = context
         self.config = config or {}
         self.monitor_started = False
-        self.streamlit_process = None
-        
+
         # 在__init__中直接初始化
         self._init_monitor()
-        self._start_streamlit()
-    
+
     def _init_monitor(self):
         """初始化监控器"""
         logger.info("[Yuffie] 插件正在初始化...")
@@ -74,40 +72,7 @@ class YuffiePlugin(Star):
             
         except Exception as e:
             logger.error(f"[Yuffie] 启动监控器失败：{e}")
-    
-    def _start_streamlit(self):
-        """启动 Streamlit Web 面板"""
-        try:
-            web_app_path = os.path.join(plugin_dir, "web_app.py")
-            
-            logger.info("[Yuffie] 正在启动 Streamlit Web 监控面板...")
-            
-            # 启动 Streamlit 进程（后台运行）
-            self.streamlit_process = subprocess.Popen(
-                [sys.executable, "-m", "streamlit", "run", web_app_path,
-                 "--server.port", "8501",
-                 "--server.headless", "true",
-                 "--server.address", "0.0.0.0"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.STDOUT,
-                start_new_session=True
-            )
-            
-            logger.info("[Yuffie] ✅ Streamlit Web 监控面板已启动")
-            logger.info("[Yuffie] 🌐 访问地址：http://localhost:8501")
-            
-        except Exception as e:
-            logger.error(f"[Yuffie] ❌ Streamlit 启动失败：{e}")
-    
-    def __del__(self):
-        """插件销毁时清理资源"""
-        if self.streamlit_process:
-            try:
-                self.streamlit_process.terminate()
-                logger.info("[Yuffie] Streamlit 已停止")
-            except Exception:
-                pass
-    
+
     # 注册指令：使用 @filter.command 装饰类方法
     @filter.command("黄金分析")
     async def gold_analysis(self, event: AstrMessageEvent):
@@ -172,8 +137,6 @@ class YuffiePlugin(Star):
   /订阅统计     - 查看订阅统计（管理员）
   /监控状态     - 查看监控器运行状态
   /帮助         - 显示此帮助信息
-
-🌐 **Web 面板**: http://localhost:8501
 
 ⚠️ **提示**: 价格异动会自动推送给订阅用户
 """
