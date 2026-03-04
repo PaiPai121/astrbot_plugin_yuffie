@@ -284,7 +284,7 @@ class YuffiePlugin(Star):
         else:
             yield event.plain_result(f"❌ 无效的等级：{level}\n\n可用等级：level1_k, level2_k, level3_k")
 
-    @filter.command("yuffie 测试图表", alias={"测试图表", "test_chart"})
+    @filter.command("yuffie 测试图表")
     async def test_chart(self, event: AstrMessageEvent):
         '''测试图表生成功能'''
         try:
@@ -301,7 +301,7 @@ class YuffiePlugin(Star):
                 from astrbot.api.message_components import Image
                 yield event.chain_result(Image.from_base64(base64.b64encode(img_bytes).decode('utf-8')))
             else:
-                yield event.plain_result("❌ 图表生成失败，请确保已安装 plotly 和 kaleido")
+                yield event.plain_result("❌ 图表生成失败，请确保已安装 matplotlib")
 
         except Exception as e:
             logger.error(f"[Yuffie] 测试图表失败：{e}")
