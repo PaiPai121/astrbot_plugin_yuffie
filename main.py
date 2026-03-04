@@ -286,7 +286,7 @@ class YuffiePlugin(Star):
 
     @filter.command("yuffie 测试图表")
     async def test_chart(self, event: AstrMessageEvent):
-        '''测试图表生成功能 - 使用真实汇率'''
+        '''测试图表生成功能 - 使用 CoinGecko 真实金价'''
         try:
             import random
             import aiohttp
@@ -302,19 +302,28 @@ class YuffiePlugin(Star):
             except Exception as e:
                 logger.warning(f"[Yuffie] 获取汇率失败，使用默认值：{e}")
 
-            # 国际金价（美元/盎司）- 模拟最近 50 分钟的数据
-            base_usd = 2650.0
-            usd_prices = [base_usd + random.uniform(-30, 30) for _ in range(50)]
+            # 获取真实金价（PAX Gold，1 PAXG = 1 盎司黄金）
+            current_price = 2650.0  # 默认价格
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd', timeout=5) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            current_price = data.get('pax-gold', {}).get('usd', 2650.0)
+            except Exception as e:
+                logger.warning(f"[Yuffie] 获取金价失败，使用默认值：{e}")
 
-            # 人民币价格（元/克）= 美元/盎司 × 汇率 ÷ 31.1035（1 盎司=31.1035 克）
-            # 注意：这是理论换算价格，实际国内金价会有溢价/折价
+            # 基于真实金价生成模拟走势（最近 50 分钟）
+            usd_prices = [current_price + random.uniform(-30, 30) for _ in range(50)]
+
+            # 人民币价格（元/克）= 美元/盎司 × 汇率 ÷ 31.1035
             cny_prices = [price * exchange_rate / 31.1035 for price in usd_prices]
 
             # 生成图表
             img_bytes = generate_price_chart(
                 usd_prices=usd_prices,
                 cny_prices=cny_prices,
-                title=f"金价走势（汇率：{exchange_rate:.4f}）"
+                title=f"金价走势（PAXG: ${current_price:.2f}）"
             )
 
             if img_bytes:
@@ -327,7 +336,7 @@ class YuffiePlugin(Star):
 
                 from astrbot.api.message_components import Image, Plain
                 chain = [
-                    Plain(f"📊 金价走势测试图表\n\n🔵 蓝色：美元/盎司 (国际金价)\n🔴 红色：人民币/克 (理论换算)\n💡 注：人民币价格 = 美元价格 × 汇率 ÷ 31.1035"),
+                    Plain(f"📊 金价走势测试图表\n\n💰 当前金价：${current_price:.2f}/盎司\n🔵 蓝色：美元/盎司 (国际金价)\n🔴 红色：人民币/克 (理论换算)\n💡 注：人民币价格 = 美元价格 × 汇率 ÷ 31.1035"),
                     Image.fromFileSystem(temp_path),
                 ]
                 yield event.chain_result(chain)
