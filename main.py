@@ -294,7 +294,7 @@ class YuffiePlugin(Star):
             prices = [base_price + random.uniform(-20, 20) for _ in range(50)]
 
             # 生成图表
-            img_bytes = generate_price_chart(prices, title="Gold Price Chart")
+            img_bytes = generate_price_chart(prices, title="金价走势测试")
 
             if img_bytes:
                 # 保存到临时文件
