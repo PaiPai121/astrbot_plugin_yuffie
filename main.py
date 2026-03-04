@@ -8,6 +8,7 @@ import os
 import sys
 import asyncio
 import subprocess
+import base64
 
 # 确保插件内部模块可以被正常导入
 plugin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -31,37 +32,30 @@ from plugins import (
     subscription_status_command,
     subscription_stats_command
 )
+from plugins.alert_levels import alert_manager, AlertLevel
+from plugins.chart_generator import generate_price_chart
 
 # 全局变量
 streamlit_process = None
 
 
 def _start_streamlit_sync():
-    """同步方式启动 Streamlit（用于__init__）"""
+    """同步方式启动 Streamlit（用于__init__）
+
+    注意：在 Docker 容器内无法启动子进程，需要在宿主机运行
+    """
     global streamlit_process
 
     try:
         web_app_path = os.path.join(plugin_dir, "web_app.py")
 
-        logger.info("[Yuffie] 正在启动 Streamlit Web 监控面板...")
-
-        # 启动 Streamlit 进程（后台运行）
-        streamlit_process = subprocess.Popen(
-            [sys.executable, "-m", "streamlit", "run", web_app_path,
-             "--server.port", "8501",
-             "--server.headless", "true",
-             "--server.address", "0.0.0.0"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-            start_new_session=True
-        )
-
-        logger.info("[Yuffie] ✅ Streamlit Web 监控面板已启动（后台进程）")
-        logger.info("[Yuffie] 🌐 访问地址：http://localhost:8501")
+        logger.info("[Yuffie] 💡 Web 面板启动说明:")
+        logger.info("[Yuffie] 由于 Docker 限制，请在宿主机上手动运行以下命令启动 Web 面板:")
+        logger.info(f"[Yuffie] cd {plugin_dir} && python3 -m streamlit run web_app.py --server.port 8501")
+        logger.info("[Yuffie] 或者发送 /web 可视化 命令尝试启动")
 
     except Exception as e:
-        logger.error(f"[Yuffie] ❌ Streamlit 启动失败：{e}")
-        logger.info("[Yuffie] 💡 您也可以发送 /web 可视化 命令手动启动")
+        logger.error(f"[Yuffie] ❌ Streamlit 启动提示失败：{e}")
 
 
 async def _start_streamlit_async():
@@ -216,14 +210,21 @@ class YuffiePlugin(Star):
 📊 **Yuffie 贵金属监控系统**
 
 💬 **可用指令**:
-  /黄金分析     - 获取黄金市场深度分析报告
-  /金价订阅     - 订阅黄金跳水预警（/订阅）
-  /金价取消订阅 - 取消订阅（/取消订阅）
-  /金价订阅状态 - 查看订阅状态（/订阅状态）
-  /金价订阅统计 - 查看订阅统计（管理员）
-  /金价监控状态 - 查看监控器运行状态
-  /web 可视化   - 启动 Web 监控面板
-  /帮助         - 显示此帮助信息
+  /黄金分析       - 获取黄金市场深度分析报告
+  /金价订阅       - 订阅黄金跳水预警
+  /金价取消订阅   - 取消订阅
+  /金价订阅状态   - 查看订阅状态
+  /金价订阅统计   - 查看订阅统计（管理员）
+  /金价监控状态   - 查看监控器运行状态
+  /yuffie 设置阈值 - 动态调整预警阈值
+  /yuffie 测试图表 - 测试图表生成功能
+  /web 可视化     - 启动 Web 监控面板
+  /帮助           - 显示此帮助信息
+
+⚙️ **高级功能**:
+  - 多级预警：Level 1(提醒) → Level 2(预警) → Level 3(熔断)
+  - 图表推送：触发警报时自动发送价格走势图
+  - 动态阈值：通过 /yuffie 设置阈值 调整灵敏度
 
 ⚠️ **提示**: 价格异动会自动推送给订阅用户
 """
@@ -246,3 +247,62 @@ class YuffiePlugin(Star):
             yield event.plain_result("✅ Streamlit Web 面板已启动\n\n🌐 访问地址：http://localhost:8501\n\n💡 提示：如果是 Docker 部署，请确保 8501 端口已映射")
         else:
             yield event.plain_result("❌ Web 面板启动失败，请查看日志")
+
+    @filter.command("yuffie 设置阈值", alias={"设置阈值", "set_atr"})
+    async def set_threshold(self, event: AstrMessageEvent, level: str = None, value: float = None):
+        '''
+        动态调整预警阈值
+
+        用法：/yuffie 设置阈值 level2_k 3.0
+        参数:
+            level: 等级 (level1_k, level2_k, level3_k)
+            value: 新的 k 值
+        '''
+        if level is None or value is None:
+            help_msg = """
+⚙️ **Yuffie 阈值设置**
+
+用法：`/yuffie 设置阈值 <等级> <k 值>`
+
+当前阈值:
+- Level 1 (提醒): k = {:.1f}
+- Level 2 (预警): k = {:.1f}
+- Level 3 (熔断): k = {:.1f}
+
+示例:
+`/yuffie 设置阈值 level2_k 3.0` - 将 Level 2 阈值设为 3.0
+""".format(
+                alert_manager.get_threshold('level1_k'),
+                alert_manager.get_threshold('level2_k'),
+                alert_manager.get_threshold('level3_k')
+            )
+            yield event.plain_result(help_msg)
+            return
+
+        if alert_manager.set_threshold(level, value):
+            yield event.plain_result(f"✅ 阈值已更新\n\n{level} = {value}")
+        else:
+            yield event.plain_result(f"❌ 无效的等级：{level}\n\n可用等级：level1_k, level2_k, level3_k")
+
+    @filter.command("yuffie 测试图表", alias={"测试图表", "test_chart"})
+    async def test_chart(self, event: AstrMessageEvent):
+        '''测试图表生成功能'''
+        try:
+            # 生成模拟数据
+            import random
+            base_price = 2650.0
+            prices = [base_price + random.uniform(-20, 20) for _ in range(50)]
+
+            # 生成图表
+            img_bytes = generate_price_chart(prices, title="测试图表 - 金价走势")
+
+            if img_bytes:
+                # 发送图片
+                from astrbot.api.message_components import Image
+                yield event.chain_result(Image.from_base64(base64.b64encode(img_bytes).decode('utf-8')))
+            else:
+                yield event.plain_result("❌ 图表生成失败，请确保已安装 plotly 和 kaleido")
+
+        except Exception as e:
+            logger.error(f"[Yuffie] 测试图表失败：{e}")
+            yield event.plain_result(f"❌ 图表生成失败：{e}")

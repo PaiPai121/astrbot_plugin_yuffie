@@ -11,15 +11,20 @@ from .subscription_commands import (
     subscription_status_command,
     subscription_stats_command
 )
+from .alert_levels import alert_manager, AlertLevel
+from .chart_generator import generate_price_chart
 
 __all__ = [
     "init_monitor",
-    "start_monitor", 
+    "start_monitor",
     "stop_monitor",
     "get_monitor",
     "handle_gold_analysis",
     "subscribe_command",
     "unsubscribe_command",
     "subscription_status_command",
-    "subscription_stats_command"
+    "subscription_stats_command",
+    "alert_manager",
+    "AlertLevel",
+    "generate_price_chart"
 ]
