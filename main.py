@@ -108,7 +108,8 @@ class YuffiePlugin(Star):
     async def sub_status(self, event: AstrMessageEvent):
         '''查看订阅状态'''
         try:
-            await subscription_status_command(event)
+            result_msg = await subscription_status_command(event)
+            yield event.plain_result(result_msg)
         except Exception as e:
             logger.error(f"[Yuffie] 查询订阅状态失败：{e}")
             yield event.plain_result(f"⚠️ 查询失败：{e}")
@@ -117,7 +118,8 @@ class YuffiePlugin(Star):
     async def sub_stats(self, event: AstrMessageEvent):
         '''查看订阅统计（管理员）'''
         try:
-            await subscription_stats_command(event)
+            result_msg = await subscription_stats_command(event)
+            yield event.plain_result(result_msg)
         except Exception as e:
             logger.error(f"[Yuffie] 查询订阅统计失败：{e}")
             yield event.plain_result(f"⚠️ 查询失败：{e}")

@@ -69,14 +69,15 @@ async def unsubscribe_command(event: AstrMessageEvent):
 async def subscription_status_command(event: AstrMessageEvent):
     """
     查看订阅状态（辅助函数，被 main.py 调用）
+    返回消息字符串
     """
     try:
         user_id = event.get_sender_id()
         user_name = event.get_sender_name() or "用户"
-        
+
         mgr = SubscriberManager()
         is_subscribed = mgr.is_subscribed(user_id)
-        
+
         if is_subscribed:
             stats = mgr.get_stats()
             result_msg = (
@@ -99,12 +100,11 @@ async def subscription_status_command(event: AstrMessageEvent):
                 f"当黄金价格出现异常波动时，\n"
                 f"系统会自动推送预警消息给您"
             )
-        
+
         mgr.close()
-        
-        # 直接发送消息
-        await event.send(Plain(result_msg))
-        
+
+        return result_msg
+
     except Exception as e:
         logger.error(f"[Subscription] 查询订阅状态失败：{e}")
         raise
@@ -112,21 +112,22 @@ async def subscription_status_command(event: AstrMessageEvent):
 async def subscription_stats_command(event: AstrMessageEvent):
     """
     查看订阅统计（管理员）（辅助函数，被 main.py 调用）
+    返回消息字符串
     """
     try:
         mgr = SubscriberManager()
         stats = mgr.get_stats()
         subscribers = mgr.get_all_subscribers()
-        
+
         # 构建订阅用户列表
         subscriber_list = "\n".join([
             f"- {s['user_name']} ({s['user_id']}) - 收到 {s['alert_count']} 次警报"
             for s in subscribers[:10]  # 只显示前 10 个
         ])
-        
+
         if len(subscribers) > 10:
             subscriber_list += f"\n... 还有 {len(subscribers) - 10} 位用户"
-        
+
         result_msg = (
             f"📊 订阅统计\n\n"
             f"👥 总用户数：{stats['total_users']}\n"
@@ -135,12 +136,11 @@ async def subscription_stats_command(event: AstrMessageEvent):
             f"📋 订阅用户列表:\n"
             f"{subscriber_list or '暂无订阅用户'}"
         )
-        
+
         mgr.close()
-        
-        # 直接发送消息
-        await event.send(Plain(result_msg))
-        
+
+        return result_msg
+
     except Exception as e:
         logger.error(f"[Subscription] 查询订阅统计失败：{e}")
         raise
