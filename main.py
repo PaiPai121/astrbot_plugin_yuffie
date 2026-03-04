@@ -32,12 +32,73 @@ from plugins import (
     subscription_stats_command
 )
 
+# 全局变量
+streamlit_process = None
+
+
+def _start_streamlit_sync():
+    """同步方式启动 Streamlit（用于__init__）"""
+    global streamlit_process
+
+    try:
+        web_app_path = os.path.join(plugin_dir, "web_app.py")
+
+        logger.info("[Yuffie] 正在启动 Streamlit Web 监控面板...")
+
+        # 启动 Streamlit 进程（后台运行）
+        streamlit_process = subprocess.Popen(
+            [sys.executable, "-m", "streamlit", "run", web_app_path,
+             "--server.port", "8501",
+             "--server.headless", "true",
+             "--server.address", "0.0.0.0"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+            start_new_session=True
+        )
+
+        logger.info("[Yuffie] ✅ Streamlit Web 监控面板已启动（后台进程）")
+        logger.info("[Yuffie] 🌐 访问地址：http://localhost:8501")
+
+    except Exception as e:
+        logger.error(f"[Yuffie] ❌ Streamlit 启动失败：{e}")
+        logger.info("[Yuffie] 💡 您也可以发送 /web 可视化 命令手动启动")
+
+
+async def _start_streamlit_async():
+    """异步方式启动 Streamlit（用于命令）"""
+    global streamlit_process
+
+    try:
+        web_app_path = os.path.join(plugin_dir, "web_app.py")
+
+        logger.info("[Yuffie] 正在启动 Streamlit Web 监控面板...")
+
+        # 使用 asyncio 启动后台进程
+        streamlit_process = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "streamlit", "run", web_app_path,
+            "--server.port", "8501",
+            "--server.headless", "true",
+            "--server.address", "0.0.0.0",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+            start_new_session=True
+        )
+
+        logger.info("[Yuffie] ✅ Streamlit Web 监控面板已启动")
+        logger.info("[Yuffie] 🌐 访问地址：http://localhost:8501")
+
+        return True
+
+    except Exception as e:
+        logger.error(f"[Yuffie] ❌ Streamlit 启动失败：{e}")
+        return False
+
 
 class YuffiePlugin(Star):
     """
     Yuffie 贵金属监控插件主类
     """
-    
+
     def __init__(self, context: Context, config: dict = None):
         super().__init__(context)
         self.context = context
@@ -46,6 +107,9 @@ class YuffiePlugin(Star):
 
         # 在__init__中直接初始化
         self._init_monitor()
+
+        # 尝试自动启动 Streamlit
+        _start_streamlit_sync()
 
     def _init_monitor(self):
         """初始化监控器"""
@@ -158,8 +222,27 @@ class YuffiePlugin(Star):
   /金价订阅状态 - 查看订阅状态（/订阅状态）
   /金价订阅统计 - 查看订阅统计（管理员）
   /金价监控状态 - 查看监控器运行状态
+  /web 可视化   - 启动 Web 监控面板
   /帮助         - 显示此帮助信息
 
 ⚠️ **提示**: 价格异动会自动推送给订阅用户
 """
         yield event.plain_result(help_text)
+
+    @filter.command("web 可视化", alias={"启动 web", "web 面板"})
+    async def start_web(self, event: AstrMessageEvent):
+        '''启动 Web 监控面板'''
+        global streamlit_process
+
+        # 检查是否已经在运行
+        if streamlit_process and streamlit_process.poll() is None:
+            yield event.plain_result("✅ Streamlit Web 面板已在运行\n\n🌐 访问地址：http://localhost:8501")
+            return
+
+        # 启动 Streamlit
+        success = await _start_streamlit_async()
+
+        if success:
+            yield event.plain_result("✅ Streamlit Web 面板已启动\n\n🌐 访问地址：http://localhost:8501\n\n💡 提示：如果是 Docker 部署，请确保 8501 端口已映射")
+        else:
+            yield event.plain_result("❌ Web 面板启动失败，请查看日志")
