@@ -286,45 +286,52 @@ class YuffiePlugin(Star):
 
     @filter.command("yuffie 测试图表")
     async def test_chart(self, event: AstrMessageEvent):
-        '''测试图表生成功能'''
+        '''测试图表生成功能 - 使用真实汇率'''
         try:
-            # 生成模拟数据
             import random
+            import aiohttp
 
-            # 美元价格（国际金价）
+            # 获取真实汇率（USD/CNY）
+            exchange_rate = 7.3  # 默认汇率
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get('https://api.exchangerate-api.com/v4/latest/USD', timeout=5) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            exchange_rate = data.get('rates', {}).get('CNY', 7.3)
+            except Exception as e:
+                logger.warning(f"[Yuffie] 获取汇率失败，使用默认值：{e}")
+
+            # 国际金价（美元/盎司）- 模拟最近 50 分钟的数据
             base_usd = 2650.0
             usd_prices = [base_usd + random.uniform(-30, 30) for _ in range(50)]
 
-            # 人民币价格（国内金价，假设汇率 7.3，1 盎司≈31.1 克）
-            base_cny = base_usd * 7.3 / 31.1
-            cny_prices = [base_cny + random.uniform(-1, 1) for _ in range(50)]
+            # 人民币价格（元/克）= 美元/盎司 × 汇率 ÷ 31.1035（1 盎司=31.1035 克）
+            # 注意：这是理论换算价格，实际国内金价会有溢价/折价
+            cny_prices = [price * exchange_rate / 31.1035 for price in usd_prices]
 
             # 生成图表
             img_bytes = generate_price_chart(
                 usd_prices=usd_prices,
                 cny_prices=cny_prices,
-                title="金价走势（美元 + 人民币）"
+                title=f"金价走势（汇率：{exchange_rate:.4f}）"
             )
 
             if img_bytes:
-                # 保存到临时文件
                 import tempfile
                 import os
 
-                # 创建临时文件
                 with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
                     f.write(img_bytes)
                     temp_path = f.name
 
-                # 发送图片 - 参考 BiliVideo 插件的用法
                 from astrbot.api.message_components import Image, Plain
                 chain = [
-                    Plain("📊 金价走势测试图表\n\n🔵 蓝色：美元/盎司\n🔴 红色：人民币/克"),
+                    Plain(f"📊 金价走势测试图表\n\n🔵 蓝色：美元/盎司 (国际金价)\n🔴 红色：人民币/克 (理论换算)\n💡 注：人民币价格 = 美元价格 × 汇率 ÷ 31.1035"),
                     Image.fromFileSystem(temp_path),
                 ]
                 yield event.chain_result(chain)
 
-                # 清理临时文件
                 try:
                     os.unlink(temp_path)
                 except:
