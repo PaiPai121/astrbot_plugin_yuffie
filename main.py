@@ -294,7 +294,7 @@ class YuffiePlugin(Star):
             prices = [base_price + random.uniform(-20, 20) for _ in range(50)]
 
             # 生成图表
-            img_bytes = generate_price_chart(prices, title="测试图表 - 金价走势")
+            img_bytes = generate_price_chart(prices, title="Test Chart - Gold Price")
 
             if img_bytes:
                 # 保存到临时文件
@@ -306,9 +306,10 @@ class YuffiePlugin(Star):
                     f.write(img_bytes)
                     temp_path = f.name
 
-                # 发送图片
+                # 发送图片 - 使用 file 参数
                 from astrbot.api.message_components import Image
-                yield event.chain_result(Image.fromFileSystem(temp_path))
+                img = Image(file=temp_path)
+                yield event.chain_result(img)
 
                 # 清理临时文件
                 try:
@@ -319,5 +320,7 @@ class YuffiePlugin(Star):
                 yield event.plain_result("❌ 图表生成失败，请确保已安装 matplotlib")
 
         except Exception as e:
+            import traceback
             logger.error(f"[Yuffie] 测试图表失败：{e}")
+            logger.error(traceback.format_exc())
             yield event.plain_result(f"❌ 图表生成失败：{e}")
