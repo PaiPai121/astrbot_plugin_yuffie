@@ -17,11 +17,11 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     from matplotlib.ticker import FuncFormatter
-    
-    # 配置中文字体 - 使用文泉驿字体
-    plt.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'WenQuanYi Zen Hei', 'SimHei', 'Arial Unicode MS']
+
+    # 配置中文字体 - 使用文泉驿正黑
+    plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'WenQuanYi Zen Hei Sharp', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
-    
+
     MATPLOTLIB_AVAILABLE = True
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
