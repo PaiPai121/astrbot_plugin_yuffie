@@ -1,11 +1,7 @@
 """
-subscription_commands.py - 订阅管理指令
+subscription_commands.py - 订阅管理指令（辅助函数）
 
-指令:
-    /订阅 - 订阅黄金跳水预警
-    /取消订阅 - 取消订阅
-    /订阅状态 - 查看订阅状态
-    /订阅统计 - 查看订阅统计（管理员）
+这些函数被 main.py 中的命令调用，不直接注册为 AstrBot 命令
 """
 
 import asyncio
@@ -15,22 +11,14 @@ from typing import Optional
 try:
     from astrbot.api import logger
     from astrbot.api.event import AstrMessageEvent
-    from astrbot.api.register import register
     from astrbot.api.message_components import Plain
 except ImportError:
     import logging
     logger = logging.getLogger("Yuffie")
-    
+
     class AstrMessageEvent:
         pass
-    
-    class register:
-        @staticmethod
-        def command(*args, **kwargs):
-            def decorator(func):
-                return func
-            return decorator
-    
+
     class Plain:
         def __init__(self, text):
             self.text = text
@@ -39,12 +27,11 @@ except ImportError:
 from .subscriber_manager import SubscriberManager
 
 
-# ==================== 指令处理 ====================
+# ==================== 指令处理辅助函数 ====================
 
-@register.command("订阅", description="订阅黄金跳水预警")
 async def subscribe_command(event: AstrMessageEvent):
     """
-    /订阅 - 订阅黄金跳水预警
+    订阅黄金跳水预警（辅助函数，被 main.py 调用）
     """
     try:
         user_id = event.get_sender_id()
@@ -52,60 +39,36 @@ async def subscribe_command(event: AstrMessageEvent):
         
         mgr = SubscriberManager()
         success = mgr.subscribe(user_id, user_name)
+        mgr.close()
         
         if success:
-            await event.send(Plain(
-                f"✅ 订阅成功！\n\n"
-                f"欢迎您，{user_name}！\n"
-                f"当黄金价格出现异常波动（跳水/暴涨）时，\n"
-                f"系统会自动推送预警消息给您。\n\n"
-                f"⚙️ 冷却时间：30 分钟（同一方向警报）\n"
-                f"📊 数据来源：东方财富 + Binance\n\n"
-                f"输入 /取消订阅 可随时取消"
-            ))
             logger.info(f"[Subscription] 用户 {user_name} ({user_id}) 订阅成功")
-        else:
-            await event.send(Plain("❌ 订阅失败，请稍后重试"))
-        
-        mgr.close()
         
     except Exception as e:
         logger.error(f"[Subscription] 订阅失败：{e}")
-        await event.send(Plain(f"❌ 订阅失败：{e}"))
+        raise
 
-
-@register.command("取消订阅", description="取消黄金跳水预警订阅")
 async def unsubscribe_command(event: AstrMessageEvent):
     """
-    /取消订阅 - 取消订阅
+    取消订阅（辅助函数，被 main.py 调用）
     """
     try:
         user_id = event.get_sender_id()
         
         mgr = SubscriberManager()
         success = mgr.unsubscribe(user_id)
+        mgr.close()
         
         if success:
-            await event.send(Plain(
-                f"✅ 取消订阅成功！\n\n"
-                f"您已不再接收黄金跳水预警。\n"
-                f"输入 /订阅 可重新订阅"
-            ))
-            logger.info(f"[Subscription] 用户 {user_id} 取消订阅")
-        else:
-            await event.send(Plain("❌ 取消订阅失败，请稍后重试"))
-        
-        mgr.close()
+            logger.info(f"[Subscription] 用户 {user_id} 取消订阅成功")
         
     except Exception as e:
         logger.error(f"[Subscription] 取消订阅失败：{e}")
-        await event.send(Plain(f"❌ 取消订阅失败：{e}"))
+        raise
 
-
-@register.command("订阅状态", description="查看订阅状态")
 async def subscription_status_command(event: AstrMessageEvent):
     """
-    /订阅状态 - 查看订阅状态
+    查看订阅状态（辅助函数，被 main.py 调用）
     """
     try:
         user_id = event.get_sender_id()
@@ -116,7 +79,7 @@ async def subscription_status_command(event: AstrMessageEvent):
         
         if is_subscribed:
             stats = mgr.get_stats()
-            await event.send(Plain(
+            result_msg = (
                 f"📊 订阅状态\n\n"
                 f"✅ 您已订阅黄金跳水预警\n\n"
                 f"👤 用户名：{user_name}\n"
@@ -126,35 +89,31 @@ async def subscription_status_command(event: AstrMessageEvent):
                 f"- 触发条件：价格波动 > 2.5 × ATR\n"
                 f"- 冷却时间：30 分钟\n"
                 f"- 监控标的：GC=F (纽约期金)\n\n"
-                f"输入 /取消订阅 可取消"
-            ))
+                f"输入 /金价取消订阅 可取消"
+            )
         else:
-            await event.send(Plain(
+            result_msg = (
                 f"📊 订阅状态\n\n"
                 f"❌ 您尚未订阅黄金跳水预警\n\n"
-                f"输入 /订阅 即可订阅\n"
+                f"输入 /金价订阅 即可订阅\n"
                 f"当黄金价格出现异常波动时，\n"
                 f"系统会自动推送预警消息给您"
-            ))
+            )
         
         mgr.close()
         
+        # 直接发送消息
+        await event.send(Plain(result_msg))
+        
     except Exception as e:
         logger.error(f"[Subscription] 查询订阅状态失败：{e}")
-        await event.send(Plain(f"❌ 查询失败：{e}"))
+        raise
 
-
-@register.command("订阅统计", description="查看订阅统计（管理员）")
 async def subscription_stats_command(event: AstrMessageEvent):
     """
-    /订阅统计 - 查看订阅统计（管理员）
+    查看订阅统计（管理员）（辅助函数，被 main.py 调用）
     """
     try:
-        # 这里可以添加管理员权限检查
-        # if not event.is_admin():
-        #     await event.send(Plain("❌ 仅限管理员查看"))
-        #     return
-        
         mgr = SubscriberManager()
         stats = mgr.get_stats()
         subscribers = mgr.get_all_subscribers()
@@ -168,36 +127,20 @@ async def subscription_stats_command(event: AstrMessageEvent):
         if len(subscribers) > 10:
             subscriber_list += f"\n... 还有 {len(subscribers) - 10} 位用户"
         
-        await event.send(Plain(
+        result_msg = (
             f"📊 订阅统计\n\n"
             f"👥 总用户数：{stats['total_users']}\n"
             f"✅ 活跃订阅：{stats['total_active']}\n"
             f"🔔 累计推送：{stats['total_alerts']}\n\n"
             f"📋 订阅用户列表:\n"
             f"{subscriber_list or '暂无订阅用户'}"
-        ))
+        )
         
         mgr.close()
         
+        # 直接发送消息
+        await event.send(Plain(result_msg))
+        
     except Exception as e:
         logger.error(f"[Subscription] 查询订阅统计失败：{e}")
-        await event.send(Plain(f"❌ 查询失败：{e}"))
-
-
-# ==================== 使用示例 ====================
-
-if __name__ == "__main__":
-    # 测试
-    mgr = SubscriberManager()
-    
-    # 订阅
-    mgr.subscribe("user123", "测试用户")
-    
-    # 检查订阅
-    print(f"是否订阅：{mgr.is_subscribed('user123')}")
-    
-    # 统计
-    stats = mgr.get_stats()
-    print(f"统计：{stats}")
-    
-    mgr.close()
+        raise

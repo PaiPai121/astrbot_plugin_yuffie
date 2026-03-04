@@ -87,41 +87,61 @@ class YuffiePlugin(Star):
     @filter.command("金价订阅", alias={"订阅金价", "yuffie 订阅", "订阅"})
     async def subscribe(self, event: AstrMessageEvent):
         '''订阅黄金跳水预警'''
-        await subscribe_command(event)
-        yield event.plain_result("✅ 订阅成功！输入 /金价订阅状态 查看状态")
+        try:
+            await subscribe_command(event)
+            yield event.plain_result("✅ 订阅成功！输入 /金价订阅状态 查看状态")
+        except Exception as e:
+            logger.error(f"[Yuffie] 订阅失败：{e}")
+            yield event.plain_result(f"⚠️ 订阅失败：{e}")
 
     @filter.command("金价取消订阅", alias={"取消订阅金价", "yuffie 取消订阅", "取消订阅"})
     async def unsubscribe(self, event: AstrMessageEvent):
         '''取消订阅'''
-        await unsubscribe_command(event)
-        yield event.plain_result("✅ 取消订阅成功！")
+        try:
+            await unsubscribe_command(event)
+            yield event.plain_result("✅ 取消订阅成功！")
+        except Exception as e:
+            logger.error(f"[Yuffie] 取消订阅失败：{e}")
+            yield event.plain_result(f"⚠️ 取消订阅失败：{e}")
 
     @filter.command("金价订阅状态", alias={"订阅金价状态", "yuffie 订阅状态", "订阅状态"})
     async def sub_status(self, event: AstrMessageEvent):
         '''查看订阅状态'''
-        await subscription_status_command(event)
+        try:
+            await subscription_status_command(event)
+        except Exception as e:
+            logger.error(f"[Yuffie] 查询订阅状态失败：{e}")
+            yield event.plain_result(f"⚠️ 查询失败：{e}")
 
     @filter.command("金价订阅统计", alias={"订阅金价统计", "yuffie 订阅统计", "订阅统计"})
     async def sub_stats(self, event: AstrMessageEvent):
         '''查看订阅统计（管理员）'''
-        await subscription_stats_command(event)
+        try:
+            await subscription_stats_command(event)
+        except Exception as e:
+            logger.error(f"[Yuffie] 查询订阅统计失败：{e}")
+            yield event.plain_result(f"⚠️ 查询失败：{e}")
 
     @filter.command("金价监控状态", alias={"监控金价", "yuffie 监控状态", "监控状态"})
     async def monitor_status(self, event: AstrMessageEvent):
         '''查看预警监控器运行状态'''
-        monitor = get_monitor()
-        if not monitor:
-            yield event.plain_result("⚠️ 监控器未初始化")
-            return
+        try:
+            monitor = get_monitor()
+            if not monitor:
+                yield event.plain_result("⚠️ 监控器未初始化")
+                return
 
-        status = monitor.get_status()
-        status_msg = (
-            f"📊 **Yuffie 监控器状态**\n\n"
-            f"运行状态：{'🟢 运行中' if status['is_running'] else '🔴 已停止'}\n"
-            f"处理 Tick：{status.get('tick_count', 0)}\n"
-            f"触发警报：{status.get('alert_count', 0)}"
-        )
-        yield event.plain_result(status_msg)
+            status = monitor.get_status()
+            status_msg = (
+                f"📊 **Yuffie 监控器状态**\n\n"
+                f"运行状态：{'🟢 运行中' if status['is_running'] else '🔴 已停止'}\n"
+                f"处理 Tick：{status.get('tick_count', 0)}\n"
+                f"触发警报：{status.get('alert_count', 0)}"
+            )
+            yield event.plain_result(status_msg)
+        except Exception as e:
+            logger.error(f"[Yuffie] 查询监控状态失败：{e}")
+            yield event.plain_result(f"⚠️ 查询失败：{e}")
 
     @filter.command("yuffie 帮助", alias={"黄金帮助", "金价帮助"})
     async def show_help(self, event: AstrMessageEvent):
