@@ -285,7 +285,7 @@ class AnalysisReport:
     
     def close(self):
         """关闭分析器"""
-        self.market_cal.close()
+        pass  # MarketCalendar 不需要关闭
 
 
 # ==================== AstrBot 指令处理 ====================
