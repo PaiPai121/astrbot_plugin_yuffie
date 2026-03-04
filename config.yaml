@@ -19,14 +19,14 @@ atr_strategy:
 
 # 3. 数据源端点 (Data Sources)
 data_sources:
-  # 国际金价数据源
-  primary_ws: "wss://stream.binance.com:9443/ws/paxgusdt@trade"  # Binance PAXG/USDT
-  fallback_api: "yfinance"                  # 备源：Yahoo Finance
-  
+  # 国际金价数据源 - 使用新浪财经替代 Binance
+  primary_ws: "wss://hq.sinajs.cn/ws"  # 新浪财经 WebSocket（国内可访问）
+  fallback_api: "yfinance"              # 备源：Yahoo Finance
+
   # 国内金价数据源（新浪财经/腾讯财经免费 API）
   domestic_gold_api: "http://hq.sinajs.cn/list=s_rtAu9999"  # 新浪财经 Au99.99
   domestic_gold_api_alt: "http://webqt.gtimg.cn/hk/quotes/data.php?code=RT_AU9999"  # 腾讯财经备选
-  
+
   # 汇率数据源（USD/CNY）
   exchange_rate_api: "http://hq.sinajs.cn/list=usdcny"  # 美元兑人民币离岸汇率
   
