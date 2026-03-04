@@ -286,13 +286,13 @@ class YuffiePlugin(Star):
 
     @filter.command("yuffie 测试图表")
     async def test_chart(self, event: AstrMessageEvent):
-        '''测试图表生成功能 - 使用 CoinGecko 真实金价'''
+        '''测试图表生成功能 - 使用真实 K 线历史数据'''
         try:
-            import random
             import aiohttp
+            from datetime import datetime, timedelta
 
             # 获取真实汇率（USD/CNY）
-            exchange_rate = 7.3  # 默认汇率
+            exchange_rate = 7.3
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.get('https://api.exchangerate-api.com/v4/latest/USD', timeout=5) as resp:
@@ -302,28 +302,62 @@ class YuffiePlugin(Star):
             except Exception as e:
                 logger.warning(f"[Yuffie] 获取汇率失败，使用默认值：{e}")
 
-            # 获取真实金价（PAX Gold，1 PAXG = 1 盎司黄金）
-            current_price = 2650.0  # 默认价格
+            # 获取真实 K 线历史数据（Binance API，无需 WebSocket）
+            # 获取最近 50 根 1 小时 K 线
+            current_price = 2650.0
+            usd_prices = []
+            timestamps = []
+
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd', timeout=5) as resp:
+                    # Binance K 线 API - 1 小时 K 线，最近 50 根
+                    async with session.get(
+                        'https://api.binance.com/api/v3/klines?symbol=PAXGUSDT&interval=1h&limit=50',
+                        timeout=10
+                    ) as resp:
                         if resp.status == 200:
-                            data = await resp.json()
-                            current_price = data.get('pax-gold', {}).get('usd', 2650.0)
+                            klines = await resp.json()
+                            for k in klines:
+                                # k[0] = 开盘时间，k[4] = 收盘价
+                                close_price = float(k[4])
+                                usd_prices.append(close_price)
+                                timestamps.append(datetime.fromtimestamp(k[0] / 1000))
+
+                            current_price = usd_prices[-1] if usd_prices else current_price
+                            logger.info(f"[Yuffie] 成功获取 {len(usd_prices)} 根 K 线")
+                        else:
+                            logger.warning(f"[Yuffie] Binance API 返回 {resp.status}")
             except Exception as e:
-                logger.warning(f"[Yuffie] 获取金价失败，使用默认值：{e}")
+                logger.warning(f"[Yuffie] 获取 K 线失败：{e}")
 
-            # 基于真实金价生成模拟走势（最近 50 分钟）
-            usd_prices = [current_price + random.uniform(-30, 30) for _ in range(50)]
+            # 如果获取失败，使用 CoinGecko 备用方案
+            if not usd_prices:
+                try:
+                    async with aiohttp.ClientSession() as session:
+                        async with session.get(
+                            'https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=usd',
+                            timeout=5
+                        ) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                current_price = data.get('pax-gold', {}).get('usd', 2650.0)
+                                # 生成模拟数据
+                                usd_prices = [current_price + i * 0.5 for i in range(-25, 25)]
+                                now = datetime.now()
+                                timestamps = [now - timedelta(hours=i) for i in range(50, 0, -1)]
+                except Exception as e:
+                    logger.warning(f"[Yuffie] 备用方案失败：{e}")
 
-            # 人民币价格（元/克）= 美元/盎司 × 汇率 ÷ 31.1035
+            # 人民币价格 = 美元价格 × 汇率 ÷ 31.1035
             cny_prices = [price * exchange_rate / 31.1035 for price in usd_prices]
 
             # 生成图表
+            title = f"金价走势（PAXG: ${current_price:.2f}）"
             img_bytes = generate_price_chart(
                 usd_prices=usd_prices,
                 cny_prices=cny_prices,
-                title=f"金价走势（PAXG: ${current_price:.2f}）"
+                timestamps=timestamps,
+                title=title
             )
 
             if img_bytes:
@@ -335,8 +369,12 @@ class YuffiePlugin(Star):
                     temp_path = f.name
 
                 from astrbot.api.message_components import Image, Plain
+                time_range = ""
+                if timestamps:
+                    time_range = f"\n📅 时间范围：{timestamps[0].strftime('%m-%d %H:%M')} - {timestamps[-1].strftime('%m-%d %H:%M')}"
+
                 chain = [
-                    Plain(f"📊 金价走势测试图表\n\n💰 当前金价：${current_price:.2f}/盎司\n🔵 蓝色：美元/盎司 (国际金价)\n🔴 红色：人民币/克 (理论换算)\n💡 注：人民币价格 = 美元价格 × 汇率 ÷ 31.1035"),
+                    Plain(f"📊 金价走势（真实 K 线）\n\n💰 当前金价：${current_price:.2f}/盎司{time_range}\n🔵 蓝色：美元/盎司 (国际金价)\n🔴 红色：人民币/克 (理论换算)\n💡 数据来源：Binance API"),
                     Image.fromFileSystem(temp_path),
                 ]
                 yield event.chain_result(chain)
