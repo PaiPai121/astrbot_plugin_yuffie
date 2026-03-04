@@ -297,9 +297,24 @@ class YuffiePlugin(Star):
             img_bytes = generate_price_chart(prices, title="测试图表 - 金价走势")
 
             if img_bytes:
+                # 保存到临时文件
+                import tempfile
+                import os
+
+                # 创建临时文件
+                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+                    f.write(img_bytes)
+                    temp_path = f.name
+
                 # 发送图片
                 from astrbot.api.message_components import Image
-                yield event.chain_result(Image.from_base64(base64.b64encode(img_bytes).decode('utf-8')))
+                yield event.chain_result(Image.fromFileSystem(temp_path))
+
+                # 清理临时文件
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
             else:
                 yield event.plain_result("❌ 图表生成失败，请确保已安装 matplotlib")
 
