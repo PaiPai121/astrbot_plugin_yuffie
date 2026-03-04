@@ -84,36 +84,36 @@ class YuffiePlugin(Star):
             logger.error(f"[Yuffie] 黄金分析失败：{e}")
             yield event.plain_result(f"⚠️ 分析失败：{e}")
 
-    @filter.command("订阅")
+    @filter.command("金价订阅", alias={"订阅金价", "yuffie 订阅", "订阅"})
     async def subscribe(self, event: AstrMessageEvent):
         '''订阅黄金跳水预警'''
         await subscribe_command(event)
-        yield event.plain_result("✅ 订阅成功！输入 /订阅状态 查看状态")
+        yield event.plain_result("✅ 订阅成功！输入 /金价订阅状态 查看状态")
 
-    @filter.command("取消订阅")
+    @filter.command("金价取消订阅", alias={"取消订阅金价", "yuffie 取消订阅", "取消订阅"})
     async def unsubscribe(self, event: AstrMessageEvent):
         '''取消订阅'''
         await unsubscribe_command(event)
         yield event.plain_result("✅ 取消订阅成功！")
 
-    @filter.command("订阅状态")
+    @filter.command("金价订阅状态", alias={"订阅金价状态", "yuffie 订阅状态", "订阅状态"})
     async def sub_status(self, event: AstrMessageEvent):
         '''查看订阅状态'''
         await subscription_status_command(event)
 
-    @filter.command("订阅统计")
+    @filter.command("金价订阅统计", alias={"订阅金价统计", "yuffie 订阅统计", "订阅统计"})
     async def sub_stats(self, event: AstrMessageEvent):
         '''查看订阅统计（管理员）'''
         await subscription_stats_command(event)
 
-    @filter.command("监控状态")
+    @filter.command("金价监控状态", alias={"监控金价", "yuffie 监控状态", "监控状态"})
     async def monitor_status(self, event: AstrMessageEvent):
         '''查看预警监控器运行状态'''
         monitor = get_monitor()
         if not monitor:
             yield event.plain_result("⚠️ 监控器未初始化")
             return
-            
+
         status = monitor.get_status()
         status_msg = (
             f"📊 **Yuffie 监控器状态**\n\n"
@@ -123,7 +123,7 @@ class YuffiePlugin(Star):
         )
         yield event.plain_result(status_msg)
 
-    @filter.command("yuffie 帮助")
+    @filter.command("yuffie 帮助", alias={"黄金帮助", "金价帮助"})
     async def show_help(self, event: AstrMessageEvent):
         '''显示插件帮助信息'''
         help_text = """
@@ -131,11 +131,11 @@ class YuffiePlugin(Star):
 
 💬 **可用指令**:
   /黄金分析     - 获取黄金市场深度分析报告
-  /订阅         - 订阅黄金跳水预警
-  /取消订阅     - 取消订阅
-  /订阅状态     - 查看订阅状态
-  /订阅统计     - 查看订阅统计（管理员）
-  /监控状态     - 查看监控器运行状态
+  /金价订阅     - 订阅黄金跳水预警（/订阅）
+  /金价取消订阅 - 取消订阅（/取消订阅）
+  /金价订阅状态 - 查看订阅状态（/订阅状态）
+  /金价订阅统计 - 查看订阅统计（管理员）
+  /金价监控状态 - 查看监控器运行状态
   /帮助         - 显示此帮助信息
 
 ⚠️ **提示**: 价格异动会自动推送给订阅用户
