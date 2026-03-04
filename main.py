@@ -294,7 +294,7 @@ class YuffiePlugin(Star):
             prices = [base_price + random.uniform(-20, 20) for _ in range(50)]
 
             # 生成图表
-            img_bytes = generate_price_chart(prices, title="Test Chart - Gold Price")
+            img_bytes = generate_price_chart(prices, title="Gold Price Chart")
 
             if img_bytes:
                 # 保存到临时文件
@@ -306,10 +306,13 @@ class YuffiePlugin(Star):
                     f.write(img_bytes)
                     temp_path = f.name
 
-                # 发送图片 - 使用 file 参数
-                from astrbot.api.message_components import Image
-                img = Image(file=temp_path)
-                yield event.chain_result(img)
+                # 发送图片 - 参考 BiliVideo 插件的用法
+                from astrbot.api.message_components import Image, Plain
+                chain = [
+                    Plain("📊 金价走势测试图表"),
+                    Image.fromFileSystem(temp_path),
+                ]
+                yield event.chain_result(chain)
 
                 # 清理临时文件
                 try:
