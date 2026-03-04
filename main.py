@@ -290,11 +290,21 @@ class YuffiePlugin(Star):
         try:
             # 生成模拟数据
             import random
-            base_price = 2650.0
-            prices = [base_price + random.uniform(-20, 20) for _ in range(50)]
+
+            # 美元价格（国际金价）
+            base_usd = 2650.0
+            usd_prices = [base_usd + random.uniform(-30, 30) for _ in range(50)]
+
+            # 人民币价格（国内金价，假设汇率 7.3，1 盎司≈31.1 克）
+            base_cny = base_usd * 7.3 / 31.1
+            cny_prices = [base_cny + random.uniform(-1, 1) for _ in range(50)]
 
             # 生成图表
-            img_bytes = generate_price_chart(prices, title="金价走势测试")
+            img_bytes = generate_price_chart(
+                usd_prices=usd_prices,
+                cny_prices=cny_prices,
+                title="金价走势（美元 + 人民币）"
+            )
 
             if img_bytes:
                 # 保存到临时文件
@@ -309,7 +319,7 @@ class YuffiePlugin(Star):
                 # 发送图片 - 参考 BiliVideo 插件的用法
                 from astrbot.api.message_components import Image, Plain
                 chain = [
-                    Plain("📊 金价走势测试图表"),
+                    Plain("📊 金价走势测试图表\n\n🔵 蓝色：美元/盎司\n🔴 红色：人民币/克"),
                     Image.fromFileSystem(temp_path),
                 ]
                 yield event.chain_result(chain)
