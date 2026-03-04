@@ -8,6 +8,7 @@ chart_generator.py - 图表生成（使用 matplotlib，支持中文）
 """
 
 import io
+import os
 from typing import Optional, List
 from datetime import datetime, timedelta
 
@@ -17,9 +18,20 @@ try:
     import matplotlib.pyplot as plt
     import matplotlib.dates as mdates
     from matplotlib.ticker import FuncFormatter
+    from matplotlib.font_manager import FontProperties
+
+    # 清除 matplotlib 字体缓存
+    font_cache_dirs = [
+        os.path.expanduser('~/.matplotlib'),
+        os.path.expanduser('~/.cache/matplotlib')
+    ]
+    for cache_dir in font_cache_dirs:
+        if os.path.exists(cache_dir):
+            import shutil
+            shutil.rmtree(cache_dir, ignore_errors=True)
 
     # 配置中文字体 - 使用文泉驿正黑
-    plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'WenQuanYi Zen Hei Sharp', 'DejaVu Sans']
+    plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'WenQuanYi Zen Hei Sharp']
     plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
     MATPLOTLIB_AVAILABLE = True
@@ -62,31 +74,38 @@ def generate_price_chart(
         if timestamps is None:
             now = datetime.now()
             timestamps = [now - timedelta(minutes=i) for i in range(len(usd_prices)-1, -1, -1)]
-        
+
+        # 加载中文字体
+        font_path = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
+        if os.path.exists(font_path):
+            font_prop = FontProperties(fname=font_path, size=12)
+        else:
+            font_prop = None
+
         # 创建图表 - 双 Y 轴
         fig, ax1 = plt.subplots(figsize=(width, height), dpi=dpi)
-        
+
         # 设置深色背景
         fig.patch.set_facecolor('#1e1e1e')
         ax1.set_facecolor('#2d2d2d')
-        
+
         # 添加美元价格线（左 Y 轴）
         line1 = ax1.plot(timestamps, usd_prices, color='#29b6f6', linewidth=2, label='美元/盎司')
         ax1.fill_between(timestamps, usd_prices, min(usd_prices), alpha=0.1, color='#29b6f6')
-        ax1.set_ylabel('美元/盎司', color='#29b6f6', fontsize=12)
+        ax1.set_ylabel('美元/盎司', color='#29b6f6', fontsize=12, fontproperties=font_prop)
         ax1.tick_params(axis='y', labelcolor='#29b6f6')
-        
+
         # 添加人民币价格线（右 Y 轴）
         if cny_prices and len(cny_prices) == len(usd_prices):
             ax2 = ax1.twinx()
             line2 = ax2.plot(timestamps, cny_prices, color='#ff6b6b', linewidth=2, label='人民币/克')
             ax2.fill_between(timestamps, cny_prices, min(cny_prices), alpha=0.1, color='#ff6b6b')
-            ax2.set_ylabel('人民币/克', color='#ff6b6b', fontsize=12)
+            ax2.set_ylabel('人民币/克', color='#ff6b6b', fontsize=12, fontproperties=font_prop)
             ax2.tick_params(axis='y', labelcolor='#ff6b6b')
-        
+
         # 设置标题和标签
-        ax1.set_title(title, color='white', fontsize=14, pad=10)
-        ax1.set_xlabel("时间", color='white', fontsize=11)
+        ax1.set_title(title, color='white', fontsize=14, pad=10, fontproperties=font_prop)
+        ax1.set_xlabel("时间", color='white', fontsize=11, fontproperties=font_prop)
         
         # 设置坐标轴颜色
         ax1.tick_params(colors='white', which='both')
@@ -106,11 +125,13 @@ def generate_price_chart(
         lines1, labels1 = ax1.get_legend_handles_labels()
         if cny_prices:
             lines2, labels2 = ax2.get_legend_handles_labels()
-            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', 
-                      facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white', fontsize=10)
+            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left',
+                      facecolor='#2d2d2d', edgecolor='#444444', labelcolor='white', fontsize=10,
+                      prop=font_prop if font_prop else {})
         else:
-            ax1.legend(loc='upper left', facecolor='#2d2d2d', edgecolor='#444444', 
-                      labelcolor='white', fontsize=10)
+            ax1.legend(loc='upper left', facecolor='#2d2d2d', edgecolor='#444444',
+                      labelcolor='white', fontsize=10,
+                      prop=font_prop if font_prop else {})
         
         # 添加网格
         ax1.grid(True, alpha=0.2, color='#666666', linestyle='-')
